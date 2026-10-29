@@ -1,0 +1,130 @@
+@host = http://localhost:5002
+@jwtToken = paste-valid-jwt-token-here
+@todoId = 1
+@categoryId = 1001
+@userId = 1005
+
+###
+# Get todos: paginated
+GET {{host}}/api/v1/todo?pageNumber=1&pageSize=10
+Accept: application/json
+Authorization: Bearer {{jwtToken}}
+
+###
+# Get todos: filtered by completion state
+GET {{host}}/api/v1/todo?pageNumber=1&pageSize=10&isComplete=true
+Accept: application/json
+Authorization: Bearer {{jwtToken}}
+
+###
+# Get todos: filtered by archive state
+GET {{host}}/api/v1/todo?pageNumber=1&pageSize=10&isArchived=false
+Accept: application/json
+Authorization: Bearer {{jwtToken}}
+
+###
+# Get todos: filtered by category
+GET {{host}}/api/v1/todo?pageNumber=1&pageSize=10&categoryId={{categoryId}}
+Accept: application/json
+Authorization: Bearer {{jwtToken}}
+
+###
+# Get todos: filtered by user
+GET {{host}}/api/v1/todo?pageNumber=1&pageSize=10&userId={{userId}}
+Accept: application/json
+Authorization: Bearer {{jwtToken}}
+
+###
+# Get todos: search and sort
+GET {{host}}/api/v1/todo?pageNumber=1&pageSize=10&search=standup&sortBy=dateCreated&sortDirection=Desc
+Accept: application/json
+Authorization: Bearer {{jwtToken}}
+
+###
+# Get todo by id
+GET {{host}}/api/v1/todo/{{todoId}}
+Accept: application/json
+Authorization: Bearer {{jwtToken}}
+
+###
+# Create todo
+POST {{host}}/api/v1/todo
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "name": "Prepare standup notes",
+  "description": "Write a short update with blockers and next steps.",
+  "datetimeReminder": "2026-07-01T09:00:00",
+  "categoryId": {{categoryId}},
+  "userId": {{userId}}
+}
+
+###
+# Update todo
+PUT {{host}}/api/v1/todo/{{todoId}}
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "todoId": {{todoId}},
+  "name": "Prepare standup notes",
+  "description": "Update the notes after checking the project board.",
+  "isComplete": false,
+  "datetimeReminder": "2026-07-01T09:30:00",
+  "categoryId": {{categoryId}},
+  "userId": {{userId}},
+  "isArchived": false
+}
+
+###
+# Set todo archive state
+PATCH {{host}}/api/v1/todo/{{todoId}}/archive
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "isArchived": true
+}
+
+###
+# Restore todo from archive
+PATCH {{host}}/api/v1/todo/{{todoId}}/archive
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "isArchived": false
+}
+
+###
+# Set todo completion state
+PATCH {{host}}/api/v1/todo/{{todoId}}/complete
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "isComplete": true
+}
+
+###
+# Reopen todo
+PATCH {{host}}/api/v1/todo/{{todoId}}/complete
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "isComplete": false
+}
+
+###
+# Delete todo
+DELETE {{host}}/api/v1/todo/{{todoId}}
+Accept: application/json
+Authorization: Bearer {{jwtToken}}

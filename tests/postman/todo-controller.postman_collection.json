@@ -1,0 +1,706 @@
+{
+  "info": {
+    "_postman_id": "7ca8a1e7-06f7-4f60-8f95-8b5c6b5c8b2f",
+    "name": "Todo List API - Todo Controller",
+    "description": "Import this collection and local.postman_environment.json, then select Todo List API - Local.\n\n1. Start the Users API (http://localhost:5001) and Todo API (http://localhost:5002).\n2. Set userName and userPass in the selected environment to an existing active user's credentials.\n3. Send Login - Users API. It saves token.accessToken as todo_bearer_token and accessToken, plus the returned userId.\n4. Send a Todo request. Each request has an explicit Authorization: Bearer {{todo_bearer_token}} header. The authorization helper is disabled to keep one Authorization header.\n\nFor a manually obtained token, set todo_bearer_token to the raw token.accessToken string and send a Todo request directly. The accessToken variable is also accepted, and an optional pasted Bearer prefix is removed. Missing, malformed, expired, or mismatched JWTs are stopped with a diagnostic before sending the Todo request. The API validates the signature.\n\nJWT configuration: this API requires Jwt:Audience = portfolio-todo-rest-api. The Users API must include portfolio-todo-rest-api in Jwt:Audiences. Restart the Users API after changing JWT settings and log in again to obtain a token with the updated audience list. Adding the header alone cannot repair an existing token's audience. jwt_issuer and jwt_audience describe the expected server settings for diagnostics; changing these Postman variables does not change server configuration.\n\nA full collection run creates, reads, updates, and deletes one sample todo. categoryId must reference an existing category; the default 1001 is supplied by the optional category seed script.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "item": [
+    {
+      "name": "Login - Users API",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const userName = String(pm.variables.get('userName') || '').trim();",
+              "const userPass = String(pm.variables.get('userPass') || '');",
+              "if (!userName || !userPass) {",
+              "    const message = 'Select Todo List API - Local and set userName and userPass before sending Login - Users API. To use an existing token, send a Todo request directly.';",
+              "    pm.test('Login credentials are configured', function () {",
+              "        pm.expect.fail(message);",
+              "    });",
+              "    console.error(message);",
+              "    pm.execution.skipRequest();",
+              "}",
+              "pm.environment.set('todo_bearer_token', '');",
+              "pm.environment.set('accessToken', '');",
+              "pm.variables.unset('todo_bearer_token');",
+              "pm.variables.unset('accessToken');",
+              "pm.request.body.update(JSON.stringify({ userName: userName, userPass: userPass }));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Login status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "if (pm.response.code === 200) {",
+              "    pm.test('Login returns an access token and user ID', function () {",
+              "        const body = pm.response.json();",
+              "        pm.expect(body.token).to.be.an('object');",
+              "        pm.expect(body.token.accessToken).to.be.a('string').and.not.empty;",
+              "        pm.expect(body.userId).to.be.a('number').and.above(0);",
+              "        pm.environment.set('todo_bearer_token', body.token.accessToken);",
+              "        pm.environment.set('accessToken', body.token.accessToken);",
+              "        pm.environment.set('userId', body.userId);",
+              "        pm.variables.set('todo_bearer_token', body.token.accessToken);",
+              "    });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userName\": \"{{userName}}\",\n  \"userPass\": \"{{userPass}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{users_base_url}}/api/auth/login",
+        "description": "Authenticate with the separate Users API. Supply userName and userPass in the selected environment. The response script saves token.accessToken and userId for the Todo requests. Re-run this request after fixing the Users API JWT audiences or when the token expires."
+      },
+      "response": []
+    },
+    {
+      "name": "Get Todos - Paginated",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has pagination and items', function () {",
+              "    const body = pm.response.json();",
+              "    pm.expect(body).to.have.property('pagination');",
+              "    pm.expect(body.pagination).to.have.property('pageNumber');",
+              "    pm.expect(body.pagination).to.have.property('pageSize');",
+              "    pm.expect(body).to.have.property('items');",
+              "    pm.expect(body.items).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{todo_bearer_token}}",
+            "type": "text",
+            "description": "JWT access token saved by Login - Users API, or supplied in the selected environment."
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{protocol}}://{{api_host}}:{{port}}/api/v1/todo?pageNumber=2&pageSize=10",
+          "protocol": "{{protocol}}",
+          "host": [
+            "{{api_host}}"
+          ],
+          "port": "{{port}}",
+          "path": [
+            "api",
+            "v1",
+            "todo"
+          ],
+          "query": [
+            {
+              "key": "pageNumber",
+              "value": "2"
+            },
+            {
+              "key": "pageSize",
+              "value": "10"
+            }
+          ]
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Todos - Filtered And Sorted",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response contains an items array', function () {",
+              "    const body = pm.response.json();",
+              "    pm.expect(body.items).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{todo_bearer_token}}",
+            "type": "text",
+            "description": "JWT access token saved by Login - Users API, or supplied in the selected environment."
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{protocol}}://{{api_host}}:{{port}}/api/v1/todo?pageNumber=1&pageSize=10&isComplete=false&isArchived=false&categoryId={{categoryId}}&userId={{userId}}&search=standup&sortBy=dateCreated&sortDirection=Desc",
+          "protocol": "{{protocol}}",
+          "host": [
+            "{{api_host}}"
+          ],
+          "port": "{{port}}",
+          "path": [
+            "api",
+            "v1",
+            "todo"
+          ],
+          "query": [
+            {
+              "key": "pageNumber",
+              "value": "1"
+            },
+            {
+              "key": "pageSize",
+              "value": "10"
+            },
+            {
+              "key": "isComplete",
+              "value": "false"
+            },
+            {
+              "key": "isArchived",
+              "value": "false"
+            },
+            {
+              "key": "categoryId",
+              "value": "{{categoryId}}"
+            },
+            {
+              "key": "userId",
+              "value": "{{userId}}"
+            },
+            {
+              "key": "search",
+              "value": "standup"
+            },
+            {
+              "key": "sortBy",
+              "value": "dateCreated"
+            },
+            {
+              "key": "sortDirection",
+              "value": "Desc"
+            }
+          ]
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Todo",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 201', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('Created todo id is saved to environment', function () {",
+              "    const body = pm.response.json();",
+              "    pm.expect(body).to.have.property('todoId');",
+              "    pm.environment.set('todoId', body.todoId);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{todo_bearer_token}}",
+            "type": "text",
+            "description": "JWT access token saved by Login - Users API, or supplied in the selected environment."
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Prepare standup notes\",\n  \"description\": \"Write a short update with blockers and next steps.\",\n  \"datetimeReminder\": \"2026-07-01T09:00:00\",\n  \"categoryId\": {{categoryId}},\n  \"userId\": {{userId}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{protocol}}://{{api_host}}:{{port}}/api/v1/todo",
+          "protocol": "{{protocol}}",
+          "host": [
+            "{{api_host}}"
+          ],
+          "port": "{{port}}",
+          "path": [
+            "api",
+            "v1",
+            "todo"
+          ]
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Todo By Id",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has todoId', function () {",
+              "    const body = pm.response.json();",
+              "    pm.expect(body.todoId).to.eql(Number(pm.environment.get('todoId')));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{todo_bearer_token}}",
+            "type": "text",
+            "description": "JWT access token saved by Login - Users API, or supplied in the selected environment."
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{protocol}}://{{api_host}}:{{port}}/api/v1/todo/{{todoId}}",
+          "protocol": "{{protocol}}",
+          "host": [
+            "{{api_host}}"
+          ],
+          "port": "{{port}}",
+          "path": [
+            "api",
+            "v1",
+            "todo",
+            "{{todoId}}"
+          ]
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Update Todo",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Todo was updated', function () {",
+              "    const body = pm.response.json();",
+              "    pm.expect(body.name).to.eql('Prepare standup notes - updated');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{todo_bearer_token}}",
+            "type": "text",
+            "description": "JWT access token saved by Login - Users API, or supplied in the selected environment."
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"todoId\": {{todoId}},\n  \"name\": \"Prepare standup notes - updated\",\n  \"description\": \"Update the notes after checking the project board.\",\n  \"isComplete\": false,\n  \"datetimeReminder\": \"2026-07-01T09:30:00\",\n  \"categoryId\": {{categoryId}},\n  \"userId\": {{userId}},\n  \"isArchived\": false\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{protocol}}://{{api_host}}:{{port}}/api/v1/todo/{{todoId}}",
+          "protocol": "{{protocol}}",
+          "host": [
+            "{{api_host}}"
+          ],
+          "port": "{{port}}",
+          "path": [
+            "api",
+            "v1",
+            "todo",
+            "{{todoId}}"
+          ]
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Set Todo Archive State",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Todo is archived', function () {",
+              "    const body = pm.response.json();",
+              "    pm.expect(body.isArchived).to.eql(true);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{todo_bearer_token}}",
+            "type": "text",
+            "description": "JWT access token saved by Login - Users API, or supplied in the selected environment."
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"isArchived\": true\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{protocol}}://{{api_host}}:{{port}}/api/v1/todo/{{todoId}}/archive",
+          "protocol": "{{protocol}}",
+          "host": [
+            "{{api_host}}"
+          ],
+          "port": "{{port}}",
+          "path": [
+            "api",
+            "v1",
+            "todo",
+            "{{todoId}}",
+            "archive"
+          ]
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Set Todo Complete State",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Todo is complete', function () {",
+              "    const body = pm.response.json();",
+              "    pm.expect(body.isComplete).to.eql(true);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{todo_bearer_token}}",
+            "type": "text",
+            "description": "JWT access token saved by Login - Users API, or supplied in the selected environment."
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"isComplete\": true\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{protocol}}://{{api_host}}:{{port}}/api/v1/todo/{{todoId}}/complete",
+          "protocol": "{{protocol}}",
+          "host": [
+            "{{api_host}}"
+          ],
+          "port": "{{port}}",
+          "path": [
+            "api",
+            "v1",
+            "todo",
+            "{{todoId}}",
+            "complete"
+          ]
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Delete Todo",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 204', function () {",
+              "    pm.response.to.have.status(204);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{todo_bearer_token}}",
+            "type": "text",
+            "description": "JWT access token saved by Login - Users API, or supplied in the selected environment."
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{protocol}}://{{api_host}}:{{port}}/api/v1/todo/{{todoId}}",
+          "protocol": "{{protocol}}",
+          "host": [
+            "{{api_host}}"
+          ],
+          "port": "{{port}}",
+          "path": [
+            "api",
+            "v1",
+            "todo",
+            "{{todoId}}"
+          ]
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "todoId",
+      "value": "1"
+    },
+    {
+      "key": "categoryId",
+      "value": "1001"
+    },
+    {
+      "key": "userId",
+      "value": "1"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (pm.request.headers.has('Authorization')) {",
+          "    const stop = function (message) {",
+          "        pm.test('Bearer token is ready for the Todo API', function () {",
+          "            pm.expect.fail(message);",
+          "        });",
+          "        console.error(message);",
+          "        pm.execution.skipRequest();",
+          "    };",
+          "    const configuredToken = String(pm.variables.get('todo_bearer_token') || '').trim()",
+          "        || String(pm.variables.get('accessToken') || '').trim();",
+          "    const token = configuredToken.replace(/^Bearer\\s+/i, '').trim();",
+          "    if (!token || token.includes('{{') || token.includes('}}')) {",
+          "        stop('No bearer token configured. Select Todo List API - Local and run Login - Users API, or set todo_bearer_token to the raw token.accessToken value.');",
+          "    }",
+          "    const parts = token.split('.');",
+          "    if (parts.length !== 3 || parts.some(function (part) { return !part; })) {",
+          "        stop('Expected a JWT access token. Use only token.accessToken from the login response.');",
+          "    }",
+          "    let claims;",
+          "    try {",
+          "        claims = JSON.parse(require('buffer').Buffer.from(parts[1], 'base64').toString('utf8'));",
+          "        if (!claims || typeof claims !== 'object' || Array.isArray(claims)) {",
+          "            throw new Error('Invalid JWT payload');",
+          "        }",
+          "    } catch (error) {",
+          "        stop('The bearer token has an invalid JWT payload. Log in again.');",
+          "    }",
+          "    const expectedIssuer = pm.variables.get('jwt_issuer') || 'portfolio-users-rest-api';",
+          "    const expectedAudience = pm.variables.get('jwt_audience') || 'portfolio-todo-rest-api';",
+          "    if (claims.iss !== expectedIssuer) {",
+          "        stop('JWT issuer mismatch. The Todo API expects ' + expectedIssuer + '. Obtain a token from the configured Users API.');",
+          "    }",
+          "    const audiences = Array.isArray(claims.aud) ? claims.aud : [claims.aud];",
+          "    if (!audiences.includes(expectedAudience)) {",
+          "        stop('JWT audience mismatch. The token must include ' + expectedAudience + '. Add it to Jwt:Audiences in the Users API configuration, restart the Users API, and log in again. A bearer header cannot fix this token.');",
+          "    }",
+          "    if (!Number.isFinite(claims.exp) || claims.exp <= Math.floor(Date.now() / 1000)) {",
+          "        stop('The bearer token is expired or has no valid expiration. Run Login - Users API again.');",
+          "    }",
+          "    pm.variables.set('todo_bearer_token', token);",
+          "    pm.request.headers.upsert({ key: 'Authorization', value: 'Bearer ' + token });",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (pm.request.headers.has('Authorization') && pm.response.code === 401) {",
+          "    pm.test('Todo API accepts the bearer token', function () {",
+          "        const challenge = pm.response.headers.get('WWW-Authenticate') || 'Bearer';",
+          "        pm.expect.fail('JWT rejected by the Todo API. WWW-Authenticate: ' + challenge + '. Check the server signing key, issuer, audience, and token expiry, then log in again.');",
+          "    });",
+          "}"
+        ]
+      }
+    }
+  ]
+}

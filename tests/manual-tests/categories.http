@@ -1,0 +1,45 @@
+@host = http://localhost:5002
+@jwtToken = paste-valid-jwt-token-here
+@categoryId = 1
+
+###
+# Get categories
+GET {{host}}/api/v1/category
+Accept: application/json
+Authorization: Bearer {{jwtToken}}
+
+###
+# Get category by id
+GET {{host}}/api/v1/category/{{categoryId}}
+Accept: application/json
+Authorization: Bearer {{jwtToken}}
+
+###
+# Create category
+POST {{host}}/api/v1/category
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "categoryId": 100,
+  "name": "Manual Tests"
+}
+
+###
+# Update category
+PUT {{host}}/api/v1/category/{{categoryId}}
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "categoryId": {{categoryId}},
+  "name": "Manual Tests Updated"
+}
+
+###
+# Delete category
+DELETE {{host}}/api/v1/category/{{categoryId}}
+Accept: application/json
+Authorization: Bearer {{jwtToken}}
